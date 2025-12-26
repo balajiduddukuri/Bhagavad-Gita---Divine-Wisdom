@@ -7,9 +7,11 @@ import {
   Heart, ChevronLeft, ChevronRight, Pause, 
   BookOpen, Sun, Moon, Type, Volume2, 
   Loader2, Grid3X3, X, Clock, Sparkles, Eye, EyeOff,
-  PlayCircle, Search, Hash, FastForward
+  PlayCircle, Search, Hash, FastForward, Palette, Command
 } from 'lucide-react';
 import { GoogleGenAI, Modality } from "@google/genai";
+
+type ThemeMode = 'neon' | 'devotional' | 'klimt';
 
 // Audio Decoding Utilities
 function decodeBase64(base64: string) {
@@ -46,6 +48,7 @@ const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('title');
   const [currentChapterIdx, setCurrentChapterIdx] = useState(0);
   const [currentSlokaIdx, setCurrentSlokaIdx] = useState(-1);
+  const [theme, setTheme] = useState<ThemeMode>('neon');
   
   // Audio & Auto-Play State
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
@@ -54,8 +57,6 @@ const App: React.FC = () => {
   const isInternalProcessingRef = useRef(false);
 
   // Settings & UI State
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [fontSize, setFontSize] = useState(1);
   const [isGridOpen, setIsGridOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,6 +71,10 @@ const App: React.FC = () => {
 
   const currentChapter = GITA_DATA[currentChapterIdx];
   const currentSloka = currentSlokaIdx >= 0 ? currentChapter.slokas[currentSlokaIdx] : null;
+
+  useEffect(() => {
+    document.body.setAttribute('data-theme', theme);
+  }, [theme]);
 
   const stopAudio = useCallback(() => {
     if (sourceNodeRef.current) {
@@ -173,7 +178,7 @@ const App: React.FC = () => {
         source.onended = () => { 
           if (sourceNodeRef.current === source) {
             setLoadingAudioKey(null);
-            if (onEnded) setTimeout(onEnded, 1500); // Sacred pause for contemplation
+            if (onEnded) setTimeout(onEnded, 1500); 
           }
         };
       } else {
@@ -195,32 +200,22 @@ const App: React.FC = () => {
     speak(`${sloka.verse}_${type}`, promptText, type, onEnded);
   }, [speak]);
 
-  // Robust Auto-Play Engine
   useEffect(() => {
     if (!isAutoPlaying) return;
-
     let timer: any;
-
     if (viewMode === 'sloka' && currentSloka) {
       if (loadingAudioKey === null && !isInternalProcessingRef.current) {
         isInternalProcessingRef.current = true;
         const parts: ('sanskrit' | 'meaning' | 'lesson')[] = ['sanskrit', 'meaning', 'lesson'];
         playPronunciation(currentSloka, parts[autoStep], () => {
           isInternalProcessingRef.current = false;
-          if (autoStep < 2) {
-            setAutoStep(prev => prev + 1);
-          } else {
-            handleNext();
-          }
+          if (autoStep < 2) setAutoStep(prev => prev + 1);
+          else handleNext();
         });
       }
-    } else if (viewMode === 'overview' || viewMode === 'title' || viewMode === 'conclusion') {
-      // For non-sloka slides, simply wait and advance
-      timer = setTimeout(() => {
-        handleNext();
-      }, 7000);
+    } else if (['overview', 'title', 'conclusion'].includes(viewMode)) {
+      timer = setTimeout(() => handleNext(), 7000);
     }
-
     return () => clearTimeout(timer);
   }, [isAutoPlaying, autoStep, viewMode, currentSloka, loadingAudioKey, playPronunciation, handleNext]);
 
@@ -263,10 +258,10 @@ const App: React.FC = () => {
   }, [searchQuery]);
 
   const Ornament = () => (
-    <div className="flex items-center justify-center gap-4 my-6 opacity-40">
-      <div className="h-[1px] w-24 bg-gradient-to-r from-transparent to-[#D4AF37]"></div>
-      <div className="text-[#D4AF37] text-xl">ॐ</div>
-      <div className="h-[1px] w-24 bg-gradient-to-l from-transparent to-[#D4AF37]"></div>
+    <div className="flex items-center justify-center gap-4 my-6 opacity-40" aria-hidden="true">
+      <div className="h-[1px] w-24 bg-gradient-to-r from-transparent to-[var(--gold)]"></div>
+      <div className="text-[var(--gold)] text-xl">ॐ</div>
+      <div className="h-[1px] w-24 bg-gradient-to-l from-transparent to-[var(--gold)]"></div>
     </div>
   );
 
@@ -274,36 +269,37 @@ const App: React.FC = () => {
     const titleKey = "title_speech";
     const isLoading = loadingAudioKey === `speech_${titleKey}`;
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-white p-6 relative overflow-hidden bg-[#1A3A52]">
-        <div className="absolute opacity-10 mandala-rotate pointer-events-none">
-          <svg width="800" height="800" viewBox="0 0 100 100" className="text-[#D4AF37]">
-            <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="0.5" strokeDasharray="1 2" />
-            <path d="M50 5 L55 45 L95 50 L55 55 L50 95 L45 55 L5 50 L45 45 Z" fill="none" stroke="currentColor" strokeWidth="0.5" />
+      <section id="main-content" className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        <div className="absolute opacity-10 mandala-rotate pointer-events-none" aria-hidden="true">
+          <svg width="800" height="800" viewBox="0 0 100 100" stroke="var(--gold)">
+            <circle cx="50" cy="50" r="45" fill="none" strokeWidth="0.5" strokeDasharray="1 2" />
+            <path d="M50 5 L55 45 L95 50 L55 55 L50 95 L45 55 L5 50 L45 45 Z" fill="none" strokeWidth="0.5" />
           </svg>
         </div>
         <div className="z-10 text-center animate-darshan flex flex-col items-center">
-          <div className="text-7xl md:text-9xl mb-6 text-[#D4AF37] filter drop-shadow-[0_0_15px_rgba(212,175,55,0.5)]">ॐ</div>
-          <h2 className="font-wisdom text-xl md:text-2xl tracking-[0.3em] text-[#D4AF37] mb-4 uppercase">{UI_TEXT.SUBTITLE}</h2>
+          <div className="text-7xl md:text-9xl mb-6 text-[var(--gold)]" aria-hidden="true">ॐ</div>
+          <h2 className="font-wisdom text-xl md:text-2xl tracking-[0.3em] text-[var(--gold)] mb-4 uppercase">{UI_TEXT.SUBTITLE}</h2>
           <div className="relative group">
-            <h1 className="font-display text-6xl md:text-8xl font-black tracking-tighter mb-6 text-white">{UI_TEXT.MAIN_HEADING}</h1>
+            <h1 className="font-display text-6xl md:text-8xl font-black tracking-tighter mb-6">{UI_TEXT.MAIN_HEADING}</h1>
             <button 
+              aria-label="Listen to title"
               onClick={() => speak(titleKey, TTS_PROMPTS.general(`${UI_TEXT.MAIN_HEADING}. ${UI_TEXT.MAIN_DESCRIPTION}`), 'ui')}
-              className={`absolute -right-12 top-1/2 -translate-y-1/2 p-2 rounded-full transition-all ${isLoading ? 'bg-[#D4AF37] text-white animate-pulse' : 'text-[#D4AF37] opacity-0 group-hover:opacity-100'}`}
+              className={`absolute -right-16 top-1/2 -translate-y-1/2 p-2 rounded-full transition-all ${isLoading ? 'bg-[var(--accent)] text-white animate-pulse' : 'text-[var(--accent)] opacity-50 group-hover:opacity-100'}`}
             >
               {isLoading ? <Loader2 className="animate-spin" size={24} /> : <Volume2 size={24} />}
             </button>
           </div>
-          <p className="font-wisdom text-lg md:text-2xl text-white/70 max-w-3xl mx-auto italic leading-relaxed">
+          <p className="font-wisdom text-lg md:text-2xl opacity-70 max-w-3xl mx-auto italic leading-relaxed">
             {UI_TEXT.MAIN_DESCRIPTION}
           </p>
           <button 
             onClick={handleNext}
-            className="mt-16 px-12 py-5 bg-[#D4AF37] text-[#1A3A52] font-display font-bold text-xl rounded-full hover:bg-[#FF6B35] transition-all transform hover:scale-110 glow-gold"
+            className="mt-16 px-12 py-5 bg-[var(--accent)] text-black font-display font-bold text-xl rounded-full hover:scale-110 transition-transform shadow-xl"
           >
             {UI_TEXT.BEGIN_BUTTON}
           </button>
         </div>
-      </div>
+      </section>
     );
   };
 
@@ -314,55 +310,60 @@ const App: React.FC = () => {
     const isOverviewLoading = loadingAudioKey === `speech_${overviewKey}`;
     
     return (
-      <div className={`min-h-[90vh] w-full max-w-6xl mx-auto p-6 md:p-12 animate-darshan flex flex-col md:flex-row items-center gap-16 ${isDarkMode ? 'text-white' : 'text-[#1A3A52]'}`}>
+      <section id="main-content" className="min-h-[90vh] w-full max-w-6xl mx-auto p-6 md:p-12 animate-darshan flex flex-col md:flex-row items-center gap-16">
         <div className="flex-1 space-y-8">
-          <div className="flex items-center justify-between">
-            <div className="inline-flex items-center gap-4 px-4 py-2 bg-[#D4AF37]/10 rounded-full border border-[#D4AF37]/30">
-                <Sparkles size={16} className="text-[#D4AF37]" />
-                <span className="font-display text-sm tracking-widest text-[#D4AF37]">
-                  {UI_TEXT.CHAPTER_LABEL} {currentChapter.id} {UI_TEXT.TOTAL_CHAPTERS}
-                </span>
-            </div>
+          <nav aria-label="Breadcrumb" className="inline-flex items-center gap-4 px-4 py-2 bg-[var(--accent)] bg-opacity-10 rounded-full border border-[var(--border)]">
+              <Sparkles size={16} className="text-[var(--accent)]" />
+              <span className="font-display text-sm tracking-widest uppercase">
+                {UI_TEXT.CHAPTER_LABEL} {currentChapter.id} {UI_TEXT.TOTAL_CHAPTERS}
+              </span>
+          </nav>
+          <div className="flex items-center gap-6">
+            <h2 className="font-display text-5xl md:text-7xl font-bold leading-tight">{currentChapter.name}</h2>
             <button 
+              aria-label="Listen to chapter summary"
               onClick={() => speak(overviewKey, TTS_PROMPTS.overview(currentChapter.name, currentChapter.meaning, currentChapter.summary), 'ui')}
-              className={`p-3 rounded-full transition-all ${isOverviewLoading ? 'bg-[#D4AF37] text-white' : 'text-[#D4AF37] hover:bg-[#D4AF37]/10'}`}
-              title={TOOLTIPS.LISTEN}
+              className={`p-3 rounded-full transition-all ${isOverviewLoading ? 'bg-[var(--accent)] text-white' : 'text-[var(--accent)] hover:bg-white/10'}`}
             >
-              {isOverviewLoading ? <Loader2 size={20} className="animate-spin" /> : <Volume2 size={20} />}
+              {isOverviewLoading ? <Loader2 size={24} className="animate-spin" /> : <Volume2 size={24} />}
             </button>
           </div>
-          <h2 className="font-display text-5xl md:text-7xl font-bold leading-tight">{currentChapter.name}</h2>
-          <h3 className="font-wisdom text-2xl md:text-3xl italic text-[#4A7C99]">{currentChapter.meaning}</h3>
+          <h3 className="font-wisdom text-2xl md:text-3xl italic opacity-80">{currentChapter.meaning}</h3>
           <Ornament />
-          <p className="font-wisdom text-xl leading-relaxed text-opacity-80 border-l-2 border-[#D4AF37] pl-8 py-2">{currentChapter.summary}</p>
-          <div className="grid grid-cols-2 gap-6">
+          <p className="font-wisdom text-xl leading-relaxed opacity-70 border-l-2 border-[var(--accent)] pl-8 py-2">{currentChapter.summary}</p>
+          <div className="grid grid-cols-2 gap-6" role="list">
              {currentChapter.themes.map((theme, idx) => (
-               <div key={idx} className="flex items-center gap-3 group">
-                  <div className="w-2 h-2 bg-[#D4AF37] rounded-full group-hover:scale-150 transition-transform"></div>
-                  <span className="font-display text-sm uppercase tracking-wider opacity-70">{theme}</span>
+               <div key={idx} className="flex items-center gap-3 group" role="listitem">
+                  <div className="w-2 h-2 bg-[var(--accent)] rounded-full group-hover:scale-150 transition-transform"></div>
+                  <span className="font-display text-sm uppercase tracking-wider opacity-60 underlined-link">{theme}</span>
                </div>
              ))}
           </div>
         </div>
         <div className="flex-1 w-full max-w-md">
-          <div className="relative p-10 sacred-glass rounded-[2rem] glow-gold overflow-hidden text-center">
-               <div className="text-xs font-display tracking-[0.4em] text-[#D4AF37] uppercase mb-8">{UI_TEXT.OPENING_WISDOM}</div>
-               <p onClick={() => playPronunciation(overviewSloka, 'sanskrit')} className={`font-devanagari text-2xl md:text-3xl font-bold leading-[2] cursor-pointer transition-colors mb-4 ${isSanskritLoading ? 'text-[#FF6B35]' : 'hover:text-[#D4AF37]'}`}>
+          <article className="relative p-10 sacred-glass rounded-[2rem] text-center">
+               <div className="text-xs font-display tracking-[0.4em] text-[var(--gold)] uppercase mb-8">{UI_TEXT.OPENING_WISDOM}</div>
+               <p 
+                role="button"
+                aria-label="Recite first verse"
+                onClick={() => playPronunciation(overviewSloka, 'sanskrit')} 
+                className={`font-devanagari text-2xl md:text-3xl font-bold leading-[2] cursor-pointer transition-colors mb-4 ${isSanskritLoading ? 'text-[var(--accent)]' : 'hover:text-[var(--gold)]'}`}
+               >
                   {overviewSloka.sanskrit}
                </p>
                <button 
                 onClick={() => playPronunciation(overviewSloka, 'sanskrit')}
-                className={`flex items-center justify-center gap-2 mx-auto mb-8 px-4 py-2 rounded-full border border-[#D4AF37]/30 font-display text-[10px] tracking-[0.2em] transition-all ${isSanskritLoading ? 'bg-[#D4AF37] text-white' : 'text-[#D4AF37] hover:bg-[#D4AF37]/10'}`}
+                className={`flex items-center justify-center gap-2 mx-auto mb-8 px-4 py-2 rounded-full border border-[var(--border)] font-display text-[10px] tracking-[0.2em] transition-all hover:bg-[var(--accent)] hover:text-black`}
                >
                  {isSanskritLoading ? <Loader2 size={12} className="animate-spin" /> : <Volume2 size={12} />}
                  {UI_TEXT.PRONOUNCE}
                </button>
-               <button onClick={() => selectSloka(currentChapterIdx, 0)} className="w-full py-5 bg-[#1A3A52] text-white font-display tracking-widest rounded-xl hover:bg-[#D4AF37] transition-all">
+               <button onClick={() => selectSloka(currentChapterIdx, 0)} className="w-full py-5 bg-[var(--accent)] text-black font-display font-bold tracking-widest rounded-xl hover:opacity-90 transition-all">
                  {UI_TEXT.READ_VERSES} {currentChapter.slokas_count} {UI_TEXT.VERSES_SUFFIX}
                </button>
-          </div>
+          </article>
         </div>
-      </div>
+      </section>
     );
   };
 
@@ -372,100 +373,83 @@ const App: React.FC = () => {
     const isLessonLoading = loadingAudioKey === `speech_${currentSloka.verse}_lesson`;
     const isSanskritLoading = loadingAudioKey === `speech_${currentSloka.verse}_sanskrit`;
 
-    // Highlight active sections during auto-play
-    const isSanskritActive = isAutoPlaying ? autoStep === 0 : true;
-    const isMeaningActive = isAutoPlaying ? autoStep === 1 : true;
-    const isLessonActive = isAutoPlaying ? autoStep === 2 : true;
-
     return (
-      <div className={`flex-1 w-full max-w-5xl mx-auto px-6 py-12 md:py-24 animate-darshan transition-all duration-700 ${isFocusMode ? 'scale-105' : 'scale-100'}`}>
-        <div className={`relative p-8 md:p-16 rounded-[3rem] transition-all duration-1000 ${isDarkMode ? 'bg-zinc-900/50' : 'bg-white/70'} sacred-glass glow-gold`}>
-          {isAutoPlaying && (
-            <div className="absolute top-0 left-0 w-full h-1 bg-[#D4AF37]/10 rounded-full overflow-hidden no-print">
-               <div 
-                className="h-full bg-[#D4AF37] transition-all duration-1000 ease-linear" 
-                style={{ width: `${((autoStep + 1) / 3) * 100}%` }}
-               ></div>
-            </div>
-          )}
-          
-          <div className={`flex justify-between items-center mb-12 no-print transition-opacity duration-500 ${isFocusMode ? 'opacity-0' : 'opacity-100'}`}>
+      <section id="main-content" className="flex-1 w-full max-w-5xl mx-auto px-6 py-12 md:py-20 animate-darshan">
+        <article className="relative p-8 md:p-16 rounded-[3rem] sacred-glass">
+          <header className={`flex justify-between items-center mb-12 no-print transition-opacity duration-500 ${isFocusMode ? 'opacity-0' : 'opacity-100'}`}>
             <div className="flex items-center gap-4">
-               <div className="font-display text-sm tracking-widest text-[#D4AF37]">
+               <span className="font-display text-sm tracking-widest text-[var(--gold)]">
                   {UI_TEXT.VERSE_LABEL} {currentSloka.verse} • {currentChapter.name}
-               </div>
+               </span>
                {isAutoPlaying && (
-                 <div className="flex items-center gap-2 px-3 py-1 bg-[#FF6B35]/10 text-[#FF6B35] rounded-full text-[10px] font-bold tracking-tighter animate-pulse">
-                    <Clock size={10} /> AUTO-FLOW: {autoStep === 0 ? 'RECITATION' : autoStep === 1 ? 'MEANING' : 'INSIGHT'}
-                 </div>
+                 <span className="px-3 py-1 bg-[var(--accent)] text-black rounded-full text-[10px] font-bold tracking-tighter animate-pulse">
+                    AUTO-FLOW: {autoStep === 0 ? 'RECITATION' : autoStep === 1 ? 'MEANING' : 'INSIGHT'}
+                 </span>
                )}
             </div>
             <div className="flex gap-4">
-               <button onClick={() => toggleFavorite(currentSloka.verse)} className={`p-3 rounded-full sacred-glass transition-all ${favorites.includes(currentSloka.verse) ? 'text-red-500 bg-red-50' : 'text-[#D4AF37]'}`}>
+               <button 
+                aria-label={favorites.includes(currentSloka.verse) ? "Remove from favorites" : "Add to favorites"}
+                onClick={() => toggleFavorite(currentSloka.verse)} 
+                className={`p-3 rounded-full sacred-glass transition-all ${favorites.includes(currentSloka.verse) ? 'text-red-500' : 'text-[var(--gold)]'}`}
+               >
                  <Heart fill={favorites.includes(currentSloka.verse) ? 'currentColor' : 'none'} size={20} />
                </button>
-               <button onClick={() => setIsFocusMode(!isFocusMode)} className="p-3 rounded-full sacred-glass text-[#D4AF37]" title={TOOLTIPS.FOCUS_MODE}>
+               <button 
+                aria-label="Toggle focus mode"
+                onClick={() => setIsFocusMode(!isFocusMode)} 
+                className="p-3 rounded-full sacred-glass text-[var(--gold)]"
+               >
                  {isFocusMode ? <EyeOff size={20} /> : <Eye size={20} />}
                </button>
             </div>
-          </div>
-          <div className="text-center space-y-12" style={{ transform: `scale(${fontSize})` }}>
-            <div className={`space-y-6 relative transition-all duration-500 ${!isSanskritActive ? 'opacity-20 scale-95 grayscale' : 'opacity-100 scale-100'}`}>
-               <div className="text-5xl text-[#D4AF37] opacity-20 font-display">ॐ</div>
+          </header>
+          <div className="text-center space-y-12">
+            <div className={`space-y-6 relative transition-all duration-500`}>
+               <div className="text-5xl text-[var(--gold)] opacity-20 font-display" aria-hidden="true">ॐ</div>
                <p 
+                role="button"
                 onClick={() => playPronunciation(currentSloka, 'sanskrit')} 
-                className={`font-devanagari text-3xl md:text-5xl font-bold leading-[1.8] tracking-tight cursor-pointer transition-colors ${isSanskritLoading ? 'text-[#FF6B35]' : 'text-[#1A3A52] dark:text-white hover:text-[#D4AF37]'}`}
+                className={`font-devanagari text-3xl md:text-5xl font-bold leading-[1.8] tracking-tight cursor-pointer transition-colors ${isSanskritLoading ? 'text-[var(--accent)]' : 'hover:text-[var(--gold)]'}`}
                >
                   {currentSloka.sanskrit}
                </p>
-               <div className="flex justify-center">
-                  <button 
-                    onClick={() => playPronunciation(currentSloka, 'sanskrit')}
-                    className={`flex items-center gap-2 px-6 py-2 rounded-full border transition-all font-display text-[10px] tracking-[0.2em] ${isSanskritLoading ? 'bg-[#D4AF37] border-[#D4AF37] text-white shadow-lg' : 'border-[#D4AF37]/30 text-[#D4AF37] hover:bg-[#D4AF37]/10'}`}
-                  >
-                    {isSanskritLoading ? <Loader2 size={12} className="animate-spin" /> : <Volume2 size={12} />}
-                    {UI_TEXT.PRONOUNCE}
-                  </button>
-               </div>
+               <button 
+                  onClick={() => playPronunciation(currentSloka, 'sanskrit')}
+                  className={`flex items-center gap-2 mx-auto px-6 py-2 rounded-full border border-[var(--border)] font-display text-[10px] tracking-[0.2em] hover:bg-[var(--accent)] hover:text-black transition-all`}
+                >
+                  {isSanskritLoading ? <Loader2 size={12} className="animate-spin" /> : <Volume2 size={12} />}
+                  {UI_TEXT.PRONOUNCE}
+                </button>
                <Ornament />
             </div>
-            <p className={`text-lg md:text-xl text-[#4A7C99] italic font-wisdom max-w-3xl mx-auto px-8 transition-all duration-500 ${!isSanskritActive ? 'opacity-10 blur-sm' : 'opacity-100'}`}>
+            <p className="text-lg md:text-xl text-[var(--accent)] opacity-80 italic font-wisdom max-w-3xl mx-auto px-8">
               {currentSloka.transliteration}
             </p>
-            <div className={`grid md:grid-cols-2 gap-12 text-left pt-8 transition-opacity duration-1000 ${isFocusMode ? 'opacity-40 hover:opacity-100' : 'opacity-100'}`}>
-              
-              {/* Meaning Card */}
-              <div className={`group/card space-y-4 p-8 rounded-3xl transition-all duration-700 ${!isMeaningActive ? 'opacity-30 grayscale scale-95' : 'opacity-100 scale-100 shadow-xl'} ${isMeaningLoading ? 'ring-4 ring-[#D4AF37] bg-[#D4AF37]/10' : 'bg-[#1A3A52]/5 dark:bg-white/5'}`}>
+            <div className="grid md:grid-cols-2 gap-12 text-left pt-8">
+              <div className={`space-y-4 p-8 rounded-3xl transition-all duration-700 ${isMeaningLoading ? 'ring-2 ring-[var(--accent)] bg-opacity-20' : 'bg-black bg-opacity-20'}`}>
                 <div className="flex justify-between items-center">
-                  <h4 className="font-display text-xs tracking-widest text-[#8B4513] dark:text-[#D4AF37] uppercase">{UI_TEXT.DIVINE_MEANING}</h4>
-                  <button 
-                    onClick={() => playPronunciation(currentSloka, 'meaning')}
-                    className={`p-2 rounded-full transition-all ${isMeaningLoading ? 'bg-[#D4AF37] text-white shadow-md' : 'text-[#D4AF37] hover:bg-[#D4AF37]/20 opacity-0 group-hover/card:opacity-100'}`}
-                  >
+                  <h4 className="font-display text-xs tracking-widest text-[var(--gold)] uppercase">{UI_TEXT.DIVINE_MEANING}</h4>
+                  <button aria-label="Play meaning audio" onClick={() => playPronunciation(currentSloka, 'meaning')} className="text-[var(--accent)]">
                     {isMeaningLoading ? <Loader2 className="animate-spin" size={16} /> : <Volume2 size={16} />}
                   </button>
                 </div>
-                <p className="font-wisdom text-xl text-[#1A3A52] dark:text-white/90 leading-relaxed italic">"{currentSloka.meaning}"</p>
+                <p className="font-wisdom text-xl opacity-90 leading-relaxed italic">"{currentSloka.meaning}"</p>
               </div>
 
-              {/* Insight Card */}
-              <div className={`group/card space-y-4 p-8 rounded-3xl transition-all duration-700 ${!isLessonActive ? 'opacity-30 grayscale scale-95' : 'opacity-100 scale-100 shadow-xl'} ${isLessonLoading ? 'ring-4 ring-[#FF6B35] bg-[#FF6B35]/10' : 'bg-[#FF6B35]/5'}`}>
+              <div className={`space-y-4 p-8 rounded-3xl transition-all duration-700 ${isLessonLoading ? 'ring-2 ring-[var(--accent)] bg-opacity-20' : 'bg-black bg-opacity-20'}`}>
                 <div className="flex justify-between items-center">
-                  <h4 className="font-display text-xs tracking-widest text-[#FF6B35] uppercase">{UI_TEXT.SACRED_INSIGHT}</h4>
-                  <button 
-                    onClick={() => playPronunciation(currentSloka, 'lesson')}
-                    className={`p-2 rounded-full transition-all ${isLessonLoading ? 'bg-[#FF6B35] text-white shadow-md' : 'text-[#FF6B35] hover:bg-[#FF6B35]/20 opacity-0 group-hover/card:opacity-100'}`}
-                  >
+                  <h4 className="font-display text-xs tracking-widest text-[var(--accent)] uppercase">{UI_TEXT.SACRED_INSIGHT}</h4>
+                  <button aria-label="Play insight audio" onClick={() => playPronunciation(currentSloka, 'lesson')} className="text-[var(--accent)]">
                     {isLessonLoading ? <Loader2 className="animate-spin" size={16} /> : <Volume2 size={16} />}
                   </button>
                 </div>
-                <p className="font-wisdom text-lg text-gray-700 dark:text-gray-300 leading-relaxed">{currentSloka.lesson}</p>
+                <p className="font-wisdom text-lg opacity-80 leading-relaxed">{currentSloka.lesson}</p>
               </div>
-
             </div>
           </div>
-        </div>
-      </div>
+        </article>
+      </section>
     );
   };
 
@@ -473,33 +457,43 @@ const App: React.FC = () => {
     const conclusionKey = "conclusion_speech";
     const isLoading = loadingAudioKey === `speech_${conclusionKey}`;
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-center p-12 animate-darshan">
-        <div className="text-9xl mb-12 text-[#D4AF37]">ॐ</div>
-        <div className="relative group">
-          <h1 className="font-display text-7xl font-bold text-[#D4AF37] mb-8">{UI_TEXT.CONCLUSION_HEADING}</h1>
-          <button 
+      <section id="main-content" className="min-h-screen flex flex-col items-center justify-center text-center p-12 animate-darshan">
+        <div className="text-9xl mb-12 text-[var(--gold)]" aria-hidden="true">ॐ</div>
+        <h1 className="font-display text-7xl font-bold text-[var(--gold)] mb-8">{UI_TEXT.CONCLUSION_HEADING}</h1>
+        <button 
+            aria-label="Play conclusion speech"
             onClick={() => speak(conclusionKey, TTS_PROMPTS.general(`${UI_TEXT.CONCLUSION_HEADING}. ${UI_TEXT.CONCLUSION_TEXT}`), 'ui')}
-            className={`absolute -right-16 top-1/2 -translate-y-1/2 p-3 rounded-full transition-all ${isLoading ? 'bg-[#D4AF37] text-white animate-pulse' : 'text-[#D4AF37] opacity-0 group-hover:opacity-100'}`}
+            className={`p-4 rounded-full transition-all mb-8 ${isLoading ? 'bg-[var(--accent)] text-black animate-pulse' : 'text-[var(--accent)]'}`}
           >
             {isLoading ? <Loader2 className="animate-spin" size={32} /> : <Volume2 size={32} />}
-          </button>
-        </div>
+        </button>
         <p className="font-wisdom text-2xl italic mb-16 opacity-70 max-w-2xl">{UI_TEXT.CONCLUSION_TEXT}</p>
-        <button onClick={() => setViewMode('title')} className="px-12 py-5 border-2 border-[#D4AF37] text-[#D4AF37] rounded-full font-display tracking-widest hover:bg-[#D4AF37] hover:text-white transition-all">RETURN TO SILENCE</button>
-      </div>
+        <button onClick={() => setViewMode('title')} className="px-12 py-5 border-2 border-[var(--accent)] text-[var(--accent)] rounded-full font-display tracking-widest hover:bg-[var(--accent)] hover:text-black transition-all">RETURN TO SILENCE</button>
+      </section>
     );
   };
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-1000 ${isDarkMode ? 'bg-black text-white' : 'bg-[#F5F5F0] text-[#1A3A52]'}`}>
-      {/* Navigation Modals */}
+    <div className="min-h-screen flex flex-col transition-colors duration-1000">
+      {/* Theme Picker */}
+      <div className="fixed top-20 right-8 z-[60] flex flex-col gap-4 no-print">
+        <button aria-label="Neon Theme" onClick={() => setTheme('neon')} className={`w-8 h-8 rounded-full border-2 border-white bg-black ${theme === 'neon' ? 'scale-125' : 'opacity-50'}`} style={{backgroundColor: '#00ffcc'}}></button>
+        <button aria-label="Devotional Theme" onClick={() => setTheme('devotional')} className={`w-8 h-8 rounded-full border-2 border-white bg-white ${theme === 'devotional' ? 'scale-125' : 'opacity-50'}`} style={{backgroundColor: '#ff6b35'}}></button>
+        <button aria-label="Klimt Theme" onClick={() => setTheme('klimt')} className={`w-8 h-8 rounded-full border-2 border-white bg-amber-600 ${theme === 'klimt' ? 'scale-125' : 'opacity-50'}`} style={{backgroundColor: '#d4af37'}}></button>
+      </div>
+
       {isGridOpen && (
-        <div className="fixed inset-0 z-[100] bg-[#1A3A52]/95 backdrop-blur-3xl flex flex-col items-center justify-center p-6 animate-darshan">
-          <button onClick={() => setIsGridOpen(false)} className="absolute top-10 right-10 text-white/50 hover:text-[#D4AF37] transition-all"><X size={48} /></button>
-          <h2 className="font-display text-4xl text-[#D4AF37] mb-12 tracking-[0.2em]">{UI_TEXT.LOTUS_SELECTION}</h2>
+        <div role="dialog" aria-modal="true" aria-label="Chapter Selection Grid" className="fixed inset-0 z-[100] bg-black bg-opacity-95 backdrop-blur-3xl flex flex-col items-center justify-center p-6 animate-darshan">
+          <button aria-label="Close grid" onClick={() => setIsGridOpen(false)} className="absolute top-10 right-10 text-white/50 hover:text-[var(--accent)] transition-all"><X size={48} /></button>
+          <h2 className="font-display text-4xl text-[var(--gold)] mb-12 tracking-[0.2em]">{UI_TEXT.LOTUS_SELECTION}</h2>
           <div className="grid grid-cols-3 md:grid-cols-6 gap-4 w-full max-w-5xl">
             {GITA_DATA.map((ch, idx) => (
-              <button key={idx} onClick={() => { setCurrentChapterIdx(idx); setCurrentSlokaIdx(-1); setViewMode('overview'); setIsGridOpen(false); }} className={`p-6 rounded-[1.5rem] border-2 transition-all ${currentChapterIdx === idx ? 'bg-[#D4AF37] border-[#D4AF37] text-[#1A3A52]' : 'border-[#D4AF37]/20 text-[#D4AF37] hover:bg-white/5'}`}>
+              <button 
+                key={idx} 
+                aria-label={`Chapter ${idx + 1}: ${ch.name}`}
+                onClick={() => { setCurrentChapterIdx(idx); setCurrentSlokaIdx(-1); setViewMode('overview'); setIsGridOpen(false); }} 
+                className={`p-6 rounded-[1.5rem] border-2 transition-all ${currentChapterIdx === idx ? 'bg-[var(--accent)] border-[var(--accent)] text-black' : 'border-[var(--border)] text-[var(--gold)] hover:bg-white/10'}`}
+              >
                 <span className="font-display text-2xl">{idx + 1}</span>
               </button>
             ))}
@@ -508,18 +502,18 @@ const App: React.FC = () => {
       )}
 
       {isSearchOpen && (
-        <div className="fixed inset-0 z-[100] bg-[#1A3A52]/98 backdrop-blur-3xl p-6 md:p-12 animate-darshan overflow-y-auto">
+        <div role="dialog" aria-modal="true" aria-label="Search Wisdom" className="fixed inset-0 z-[100] bg-black bg-opacity-98 backdrop-blur-3xl p-6 md:p-12 animate-darshan overflow-y-auto">
           <div className="max-w-4xl mx-auto space-y-12">
             <div className="flex justify-between items-center">
-              <h2 className="font-display text-4xl text-[#D4AF37] tracking-[0.1em]">SEARCH WISDOM</h2>
-              <button onClick={() => setIsSearchOpen(false)} className="text-white/50 hover:text-white"><X size={32} /></button>
+              <h2 className="font-display text-4xl text-[var(--gold)] tracking-[0.1em]">SEARCH WISDOM</h2>
+              <button aria-label="Close search" onClick={() => setIsSearchOpen(false)} className="text-white/50 hover:text-white"><X size={32} /></button>
             </div>
             <div className="relative">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-[#D4AF37]" size={24} />
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--accent)]" size={24} aria-hidden="true" />
               <input 
                 type="text" 
-                placeholder="Search by verse (e.g. 2.47) or keyword (e.g. duty, soul)..." 
-                className="w-full bg-white/10 border-2 border-[#D4AF37]/30 rounded-2xl py-6 pl-16 pr-6 text-2xl text-white font-wisdom focus:outline-none focus:border-[#D4AF37]"
+                placeholder="Search by verse (e.g. 2.47) or keyword..." 
+                className="w-full bg-white/10 border-2 border-[var(--border)] rounded-2xl py-6 pl-16 pr-6 text-2xl text-white font-wisdom focus:outline-none focus:border-[var(--accent)]"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoFocus
@@ -529,108 +523,76 @@ const App: React.FC = () => {
               {searchResults.map((res, i) => (
                 <button key={i} onClick={() => selectSloka(res.chIdx, res.sIdx)} className="text-left p-6 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all group">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-[#D4AF37] font-display text-sm tracking-widest">{res.sloka.verse} • {res.chapterName}</span>
+                    <span className="text-[var(--gold)] font-display text-sm tracking-widest underlined-link">{res.sloka.verse} • {res.chapterName}</span>
                     <ChevronRight size={16} className="text-white/20 group-hover:translate-x-1 transition-transform" />
                   </div>
                   <p className="text-white/80 font-wisdom italic line-clamp-2">"{res.sloka.meaning}"</p>
                 </button>
               ))}
-              {searchQuery && searchResults.length === 0 && <p className="text-center text-[#D4AF37]/50 font-wisdom text-xl">No slokas found for this query...</p>}
+              {searchQuery && searchResults.length === 0 && <p className="text-center opacity-50 font-wisdom text-xl">No slokas found for this query...</p>}
             </div>
           </div>
         </div>
       )}
 
-      {/* Header */}
+      {/* Header Landmark */}
       {viewMode !== 'title' && !isFocusMode && (
-        <header className="sticky top-0 z-50 sacred-glass border-b border-[#D4AF37]/10 px-8 py-4 flex items-center justify-between no-print">
+        <header className="sticky top-0 z-50 sacred-glass border-b border-[var(--border)] px-8 py-4 flex items-center justify-between no-print" role="banner">
           <div className="flex items-center gap-6">
-             <button onClick={() => setViewMode('title')} className="text-[#D4AF37] font-display font-black text-2xl tracking-tighter">GITA</button>
-             <div className="h-6 w-[1px] bg-[#D4AF37]/20"></div>
-             <button onClick={() => setIsSearchOpen(true)} className="flex items-center gap-2 text-[#D4AF37]/60 hover:text-[#D4AF37] transition-colors">
+             <button onClick={() => setViewMode('title')} className="font-display font-black text-2xl tracking-tighter text-[var(--accent)]">GITA</button>
+             <div className="h-6 w-[1px] bg-[var(--border)]"></div>
+             <button onClick={() => setIsSearchOpen(true)} className="flex items-center gap-2 opacity-60 hover:opacity-100 transition-colors">
                 <Search size={18} />
-                <span className="font-display text-xs tracking-widest">SEARCH</span>
+                <span className="font-display text-xs tracking-widest underlined-link">SEARCH</span>
              </button>
           </div>
-          <div className="flex items-center gap-4">
-             {isAutoPlaying && (
-               <div className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-[#FF6B35] text-white rounded-full text-[10px] font-bold tracking-[0.2em]">
-                 <FastForward size={14} className="animate-pulse" /> AUTO-PLAY ACTIVE
-               </div>
-             )}
-             <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 text-[#D4AF37]">{isDarkMode ? <Sun size={20} /> : <Moon size={20} />}</button>
-             <button onClick={() => setIsGridOpen(true)} className="px-6 py-2 bg-[#D4AF37] text-[#1A3A52] rounded-full font-display text-xs font-bold tracking-widest">CHAPTERS</button>
+          <div className="flex items-center gap-6">
+             <button onClick={() => setIsGridOpen(true)} className="px-6 py-2 bg-[var(--accent)] text-black rounded-full font-display text-xs font-bold tracking-widest flex items-center gap-2">
+               <Grid3X3 size={14} /> CHAPTERS
+             </button>
           </div>
         </header>
       )}
 
-      {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center relative overflow-hidden">
+      {/* Main Content Landmark */}
+      <main className="flex-1 flex items-center justify-center relative overflow-hidden" role="main">
         {viewMode === 'title' && renderTitleSlide()}
         {viewMode === 'overview' && renderChapterOverview()}
         {viewMode === 'sloka' && renderSlokaSlide()}
         {viewMode === 'conclusion' && renderConclusion()}
       </main>
 
-      {/* Footer Controls */}
+      {/* Footer Controls Landmark */}
       {viewMode !== 'title' && viewMode !== 'conclusion' && !isFocusMode && (
-        <footer className="sticky bottom-0 z-50 sacred-glass p-6 no-print">
+        <footer className="sticky bottom-0 z-50 sacred-glass p-6 no-print" role="contentinfo">
           <div className="max-w-6xl mx-auto flex items-center justify-between gap-6">
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={handlePrev} 
-                className="p-4 bg-[#D4AF37]/10 rounded-full text-[#D4AF37] hover:bg-[#D4AF37] hover:text-white transition-all shadow-sm"
-                title={TOOLTIPS.PREV_VERSE}
-              >
-                <ChevronLeft size={28} />
-              </button>
-              {isAutoPlaying && (
-                <button 
-                  onClick={() => { setIsAutoPlaying(false); stopAudio(); }} 
-                  className="px-4 py-2 text-[10px] font-display font-bold text-[#FF6B35] hover:underline"
-                >
-                  EXIT AUTO
-                </button>
-              )}
-            </div>
-            
+            <button aria-label="Previous verse" onClick={handlePrev} className="p-4 bg-white/10 rounded-full hover:bg-[var(--accent)] hover:text-black transition-all"><ChevronLeft size={28} /></button>
             <div className="flex-1 flex flex-col items-center gap-4">
-               <div className="flex items-center gap-6">
+               <div className="flex items-center gap-8">
                   <button 
-                    onClick={() => {
-                      if (isAutoPlaying) {
-                        setIsAutoPlaying(false);
-                        stopAudio();
-                      } else {
-                        setIsAutoPlaying(true);
-                      }
-                    }} 
-                    className={`p-5 rounded-full transition-all transform hover:scale-110 active:scale-95 ${isAutoPlaying ? 'bg-[#FF6B35] text-white shadow-[0_0_20px_rgba(255,107,53,0.4)]' : 'bg-[#D4AF37]/10 text-[#D4AF37]'}`}
-                    title={isAutoPlaying ? TOOLTIPS.PAUSE_FLOW : TOOLTIPS.START_FLOW}
+                    aria-label={isAutoPlaying ? "Pause auto-play" : "Start auto-play"}
+                    onClick={() => setIsAutoPlaying(!isAutoPlaying)} 
+                    className={`p-6 rounded-full transition-all transform hover:scale-110 ${isAutoPlaying ? 'bg-[var(--accent)] text-black' : 'bg-white/10 text-[var(--accent)]'}`}
                   >
                     {isAutoPlaying ? <Pause size={32} /> : <PlayCircle size={32} />}
                   </button>
-                  <div className="text-center min-w-[80px]">
-                    <div className="text-[10px] font-display font-bold tracking-[0.2em] text-[#D4AF37] opacity-60 uppercase">VERSE</div>
-                    <div className="font-wisdom font-bold text-lg">
+                  <div className="text-center min-w-[100px]">
+                    <div className="text-[10px] font-display font-bold tracking-[0.2em] text-[var(--gold)] uppercase opacity-60">VERSE</div>
+                    <div className="font-wisdom font-bold text-xl">
                       {currentSlokaIdx >= 0 ? `${currentSlokaIdx + 1} / ${currentChapter.slokas.length}` : 'INTRO'}
                     </div>
                   </div>
                </div>
             </div>
-
-            <button 
-              onClick={handleNext} 
-              className="p-4 bg-[#D4AF37] text-[#1A3A52] rounded-full hover:bg-[#FF6B35] hover:text-white transition-all shadow-[0_10px_30px_rgba(212,175,55,0.3)]"
-              title={TOOLTIPS.NEXT_VERSE}
-            >
-              <ChevronRight size={28} />
-            </button>
+            <button aria-label="Next verse" onClick={handleNext} className="p-4 bg-[var(--accent)] text-black rounded-full hover:scale-110 transition-all shadow-xl"><ChevronRight size={28} /></button>
+          </div>
+          <div className="text-center pt-4 opacity-40 text-[10px] tracking-widest font-display">
+            CREATED BY BALAJIDUDDUKURI
           </div>
         </footer>
       )}
 
-      {isFocusMode && <button onClick={() => setIsFocusMode(false)} className="fixed bottom-10 right-10 p-4 sacred-glass rounded-full text-[#D4AF37] opacity-20 hover:opacity-100 transition-opacity"><EyeOff size={24} /></button>}
+      {isFocusMode && <button aria-label="Exit focus mode" onClick={() => setIsFocusMode(false)} className="fixed bottom-10 right-10 p-4 sacred-glass rounded-full text-[var(--accent)] opacity-20 hover:opacity-100 transition-opacity"><EyeOff size={24} /></button>}
     </div>
   );
 };
